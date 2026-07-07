@@ -1,44 +1,47 @@
-// app.js
 const express = require('express');
 
-const app = express();
-const PORT = 3000;
+const bodyParser = require('body-parser'); const app = express();
+const port = 3000;
 
-// Middleware to log requests
-app.use((req, res, next) => {
-	console.log(`${req.method} ${req.url}`);
-	next();
+// Middleware to parse JSON request bodies 
+app.use(bodyParser.json());
+
+// In-memory data storage (temporary for demo) 
+let users = [];
+
+// POST: Accept data (create new user) 
+app.post('/users', (req, res) => {
+	const { id, name, email } = req.body; if (!id || !name || !email) {
+		return res.status(400).json({ error: 'All fields (id, name, email) are required' }); 
+	}
+	
+	// Check if user with same ID exists 
+	if (users.find(user => user.id === id)) {
+		return res.status(409).json({ error: 'User with this ID already exists' }); 
+	}
+	
+	users.push({ id, name, email });	
+	res.status(201).json({ message: 'User added successfully' }); 
 });
 
-// 1. Define and Handling a basic route
-app.get('/', (req, res) => {
-	res.send('Welcome to the Home page!');
+// GET: Retrieve all users 
+app.get('/users', (req, res) => { 
+	res.status(200).json(users); 
 });
 
-// 2. Route parameters - /user/:id
-app.get('/user/:id', (req, res) => {
-	const userId = req.params.id;
-	res.send(`User id received: ${userId}`);
+// DELETE: Remove a specific user by ID 
+app.delete('/users/:id', (req, res) => { 
+	const id = req.params.id;
+	const index = users.findIndex(user => user.id === id); 
+	if (index === -1) {
+		return res.status(404).json({ error: 'User not found' }); 
+	}
+
+	const deletedUser = users.splice(index, 1);
+	res.status(200).json({ message: `User ${deletedUser[0].name} deleted successfully` }); 
 });
 
-// 3. Query parameters - /search?keyword=books&type=pdf
-app.get('/search', (req, res) => {
-	const { keyword, type } = req.query;
-	res.send(`Search Query Received - Keyword: ${keyword}, Type: ${type}`); 
+// Start the server 
+app.listen(port, () => {
+	console.log(`Server running at http://localhost:${port}`); 
 });
-
-// 4. URL building example (internal redirect)
-app.get('/redirect-to-user/:name', (req, res) => {
-	const name = req.params.name; // Build a new URL to redirect
-	const userProfileURL = `/profile/${name}?details=full`; res.redirect(userProfileURL);
-});
-
-// 5. Profile Page using both route and query params 
-app.get('/profile/:name', (req, res) => {
-	const name = req.params.name; const details = req.query.details;
-	res.send(`Profile Page of ${name} - Details: ${details}`); 
-});
-
-app.listen(PORT, () => {
-	console.log(`Server running at http://localhost:${PORT}`); 
-});	
